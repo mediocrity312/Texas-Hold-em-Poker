@@ -1,0 +1,2973 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Техасский Холдем — Texas Hold'em Poker</title>
+  <style>
+    :root {
+      --bg-dark: #090e11;
+      --felt-center: #10592c;
+      --felt-edge: #062b14;
+      --table-rim: #2d1808;
+      --table-border: #d4af37;
+      --table-leather: #1c0d03;
+      --accent-gold: #f5c518;
+      --accent-gold-glow: rgba(245, 197, 24, 0.45);
+      --card-bg: #ffffff;
+      --card-back: #1e3a8a;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --btn-fold: #dc2626;
+      --btn-fold-hover: #ef4444;
+      --btn-check: #2563eb;
+      --btn-check-hover: #3b82f6;
+      --btn-raise: #16a34a;
+      --btn-raise-hover: #22c55e;
+      --btn-allin: #d97706;
+      --btn-allin-hover: #f59e0b;
+      --modal-bg: rgba(15, 23, 42, 0.95);
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      background-image: radial-gradient(circle at center, #131c24 0%, #080d11 100%);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    /* Top Navigation Bar */
+    header {
+      background: rgba(10, 15, 20, 0.85);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid rgba(212, 175, 55, 0.25);
+      padding: 8px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 50;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-logo {
+      width: 28px;
+      height: 28px;
+      fill: var(--accent-gold);
+    }
+
+    .brand-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      background: linear-gradient(135deg, #fff 0%, #f5c518 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-icon {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-main);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+
+    .btn-icon:hover {
+      background: rgba(255, 255, 255, 0.18);
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    .btn-icon.active {
+      background: var(--accent-gold);
+      color: #000;
+      border-color: var(--accent-gold);
+    }
+
+    /* Main Poker Arena */
+    .arena-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 15px;
+      position: relative;
+      max-width: 1200px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* Poker Table Surface */
+    .table-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 980px;
+      aspect-ratio: 16 / 9.5;
+      min-height: 440px;
+      max-height: 580px;
+      margin: 10px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .poker-table {
+      position: absolute;
+      inset: 0;
+      border-radius: 200px;
+      background: radial-gradient(ellipse at center, var(--felt-center) 0%, var(--felt-edge) 85%);
+      box-shadow: 
+        inset 0 0 40px rgba(0, 0, 0, 0.8),
+        0 0 0 14px var(--table-rim),
+        0 0 0 17px var(--table-border),
+        0 0 0 26px var(--table-leather),
+        0 20px 40px rgba(0, 0, 0, 0.85);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: visible;
+    }
+
+    .table-center-line {
+      position: absolute;
+      width: 82%;
+      height: 72%;
+      border: 2px dashed rgba(212, 175, 55, 0.2);
+      border-radius: 140px;
+      pointer-events: none;
+    }
+
+    /* Table Center: Community cards, Pot, Stage */
+    .table-center {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .pot-display {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: rgba(0, 0, 0, 0.65);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      padding: 6px 18px;
+      border-radius: 20px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    }
+
+    .pot-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent-gold);
+      font-weight: 700;
+    }
+
+    .pot-amount {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .side-pots-container {
+      display: flex;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: #cbd5e1;
+    }
+
+    .side-pot-badge {
+      background: rgba(217, 119, 6, 0.35);
+      border: 1px solid rgba(245, 158, 11, 0.6);
+      border-radius: 10px;
+      padding: 2px 8px;
+    }
+
+    .community-cards {
+      display: flex;
+      gap: 8px;
+      min-height: 84px;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-placeholder {
+      width: 56px;
+      height: 80px;
+      border: 2px dashed rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.15);
+    }
+
+    .stage-badge {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: #94a3b8;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 2px 10px;
+      border-radius: 12px;
+      text-transform: uppercase;
+    }
+
+    /* Playing Cards */
+    .card {
+      width: 56px;
+      height: 80px;
+      background: var(--card-bg);
+      border-radius: 6px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(0,0,0,0.1);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 4px;
+      font-family: "Arial Black", "Arial", sans-serif;
+      font-weight: 900;
+      cursor: default;
+      transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.25s ease;
+      perspective: 600px;
+    }
+
+    .card.slide-in {
+      animation: cardSlide 0.3s ease-out forwards;
+    }
+
+    .card.highlight-winner {
+      box-shadow: 0 0 18px 4px var(--accent-gold), inset 0 0 0 2px var(--accent-gold);
+      transform: translateY(-6px) scale(1.05);
+      z-index: 15;
+    }
+
+    @keyframes cardSlide {
+      0% {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.85);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .card.red {
+      color: #dc2626;
+    }
+
+    .card.black {
+      color: #1e293b;
+    }
+
+    .card-corner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1;
+    }
+
+    .card-val {
+      font-size: 0.95rem;
+      font-weight: 800;
+    }
+
+    .card-suit-mini {
+      font-size: 0.75rem;
+    }
+
+    .card-suit-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 1.5rem;
+      opacity: 0.9;
+    }
+
+    .card-back-style {
+      background: linear-gradient(135deg, #1e3a8a 0%, #172554 100%);
+      border: 2px solid #fff;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card-back-style::after {
+      content: "🂠";
+      font-size: 2.2rem;
+      color: rgba(255, 255, 255, 0.25);
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    /* Player Seats */
+    .seat {
+      position: absolute;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 140px;
+      z-index: 20;
+      transition: all 0.3s ease;
+    }
+
+    /* 4 Player Positions */
+    .seat-0 { /* Bottom: Human */
+      bottom: -32px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .seat-1 { /* Left: Viktor "Skala" */
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .seat-2 { /* Top: Elena "Akula" */
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    .seat-3 { /* Right: Max "Joker" */
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .player-card-container {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 6px;
+      position: relative;
+    }
+
+    .player-box {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.88);
+      border: 2px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 6px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+      position: relative;
+      transition: all 0.25s ease;
+    }
+
+    .seat.active .player-box {
+      border-color: var(--accent-gold);
+      box-shadow: 0 0 20px var(--accent-gold-glow), 0 6px 16px rgba(0, 0, 0, 0.6);
+      animation: pulseActive 1.5s infinite alternate;
+    }
+
+    @keyframes pulseActive {
+      0% { box-shadow: 0 0 10px rgba(245, 197, 24, 0.3); }
+      100% { box-shadow: 0 0 22px rgba(245, 197, 24, 0.8); }
+    }
+
+    .seat.folded {
+      opacity: 0.45;
+      filter: grayscale(0.8);
+    }
+
+    .seat.winner .player-box {
+      border-color: #22c55e;
+      box-shadow: 0 0 25px rgba(34, 197, 94, 0.8);
+    }
+
+    .player-info-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .player-name {
+      font-size: 0.85rem;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 95px;
+    }
+
+    .player-chips {
+      font-size: 0.95rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .player-status-badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      margin-top: 2px;
+      min-height: 16px;
+      color: #cbd5e1;
+    }
+
+    .player-status-badge.all-in {
+      background: var(--btn-allin);
+      color: #000;
+    }
+
+    .player-status-badge.folded-text {
+      background: #475569;
+      color: #cbd5e1;
+    }
+
+    .player-status-badge.action {
+      background: rgba(37, 99, 235, 0.6);
+      color: #fff;
+    }
+
+    /* Dealer / Blind Badges */
+    .dealer-badge, .blind-badge {
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 900;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+      z-index: 25;
+    }
+
+    .dealer-badge {
+      background: #ffffff;
+      color: #000;
+      border: 2px solid #000;
+      top: -8px;
+      right: -6px;
+    }
+
+    .blind-badge.sb {
+      background: #3b82f6;
+      color: #fff;
+      top: -8px;
+      left: -6px;
+    }
+
+    .blind-badge.bb {
+      background: #eab308;
+      color: #000;
+      top: -8px;
+      left: -6px;
+    }
+
+    /* Player Bet Chips on Table */
+    .player-bet-chip {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.75);
+      border: 1px solid var(--accent-gold);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      z-index: 15;
+      white-space: nowrap;
+    }
+
+    .seat-0 .player-bet-chip { top: -28px; }
+    .seat-1 .player-bet-chip { right: -50px; top: 30px; }
+    .seat-2 .player-bet-chip { bottom: -28px; }
+    .seat-3 .player-bet-chip { left: -50px; top: 30px; }
+
+    /* Current Hand Evaluation Tooltip for Human */
+    .hand-eval-badge {
+      position: absolute;
+      bottom: 74px;
+      background: rgba(0, 0, 0, 0.85);
+      border: 1px solid var(--accent-gold);
+      color: var(--accent-gold);
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 14px;
+      white-space: nowrap;
+      pointer-events: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+      z-index: 30;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Action Control Panel (Bottom) */
+    .action-panel-wrapper {
+      width: 100%;
+      max-width: 900px;
+      margin-top: 15px;
+      z-index: 40;
+    }
+
+    .action-panel {
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 12px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(10px);
+    }
+
+    .action-panel.disabled {
+      opacity: 0.4;
+      pointer-events: none;
+      filter: grayscale(0.5);
+    }
+
+    .bet-slider-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .bet-slider {
+      flex: 1;
+      accent-color: var(--accent-gold);
+      cursor: pointer;
+      height: 6px;
+    }
+
+    .bet-value-box {
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      border-radius: 8px;
+      padding: 4px 10px;
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+      min-width: 80px;
+      text-align: center;
+    }
+
+    .bet-presets {
+      display: flex;
+      gap: 6px;
+      justify-content: space-between;
+    }
+
+    .btn-preset {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--text-main);
+      border-radius: 6px;
+      padding: 4px 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-preset:hover {
+      background: rgba(245, 197, 24, 0.2);
+      border-color: var(--accent-gold);
+      color: var(--accent-gold);
+    }
+
+    .main-actions-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-action {
+      flex: 1;
+      padding: 12px 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    .btn-action:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.6);
+    }
+
+    .btn-action:active {
+      transform: translateY(1px);
+    }
+
+    .btn-action .sub-amt {
+      font-size: 0.75rem;
+      font-weight: 600;
+      opacity: 0.9;
+    }
+
+    .btn-fold {
+      background: linear-gradient(180deg, var(--btn-fold-hover) 0%, var(--btn-fold) 100%);
+    }
+
+    .btn-check-call {
+      background: linear-gradient(180deg, var(--btn-check-hover) 0%, var(--btn-check) 100%);
+    }
+
+    .btn-bet-raise {
+      background: linear-gradient(180deg, var(--btn-raise-hover) 0%, var(--btn-raise) 100%);
+    }
+
+    .btn-allin-quick {
+      background: linear-gradient(180deg, var(--btn-allin-hover) 0%, var(--btn-allin) 100%);
+      color: #000;
+    }
+
+    /* Winner Notification Banner */
+    .winner-banner {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.9);
+      background: rgba(15, 23, 42, 0.96);
+      border: 2px solid var(--accent-gold);
+      border-radius: 16px;
+      padding: 16px 28px;
+      box-shadow: 0 0 40px rgba(245, 197, 24, 0.6), 0 20px 40px rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      z-index: 100;
+      text-align: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .winner-banner.show {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+      pointer-events: auto;
+    }
+
+    .winner-title {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--accent-gold);
+    }
+
+    .winner-desc {
+      font-size: 1rem;
+      color: #f1f5f9;
+    }
+
+    .winner-amount {
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #22c55e;
+    }
+
+    /* Next Hand Countdown / Button */
+    .btn-next-hand {
+      background: linear-gradient(135deg, var(--accent-gold) 0%, #d97706 100%);
+      color: #000;
+      border: none;
+      padding: 8px 18px;
+      border-radius: 8px;
+      font-weight: 800;
+      font-size: 0.9rem;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: transform 0.2s ease;
+    }
+
+    .btn-next-hand:hover {
+      transform: scale(1.05);
+    }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+      padding: 16px;
+    }
+
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-content {
+      background: var(--modal-bg);
+      border: 1px solid rgba(212, 175, 55, 0.4);
+      border-radius: 16px;
+      width: 100%;
+      max-width: 600px;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
+      overflow: hidden;
+      transform: scale(0.95);
+      transition: transform 0.25s ease;
+    }
+
+    .modal-overlay.open .modal-content {
+      transform: scale(1);
+    }
+
+    .modal-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.5rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    .modal-close:hover {
+      color: #fff;
+    }
+
+    .modal-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      flex: 1;
+      font-size: 0.9rem;
+      color: #cbd5e1;
+      line-height: 1.5;
+    }
+
+    /* Cheat Sheet Items */
+    .rank-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      gap: 10px;
+    }
+
+    .rank-item:last-child {
+      border-bottom: none;
+    }
+
+    .rank-name-box {
+      flex: 1;
+    }
+
+    .rank-number {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: var(--accent-gold);
+    }
+
+    .rank-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .rank-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .rank-cards-mini {
+      display: flex;
+      gap: 4px;
+    }
+
+    .mini-card {
+      width: 24px;
+      height: 34px;
+      background: #fff;
+      border-radius: 3px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.65rem;
+      font-weight: 900;
+      line-height: 1;
+      color: #000;
+    }
+
+    .mini-card.red {
+      color: #dc2626;
+    }
+
+    /* Log list */
+    .log-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-family: monospace;
+      font-size: 0.8rem;
+    }
+
+    .log-entry {
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .log-entry.log-action { color: #93c5fd; }
+    .log-entry.log-win { color: #86efac; font-weight: bold; background: rgba(34, 197, 94, 0.1); }
+    .log-entry.log-fold { color: #fca5a5; }
+    .log-entry.log-blind { color: #fde047; }
+
+    /* Rebuy Modal */
+    .rebuy-box {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 0;
+    }
+
+    .rebuy-icon {
+      font-size: 3rem;
+      color: var(--accent-gold);
+    }
+
+    .btn-rebuy {
+      background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+      color: #fff;
+      border: none;
+      padding: 12px 28px;
+      border-radius: 10px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      box-shadow: 0 4px 15px rgba(22, 163, 74, 0.5);
+    }
+
+    .btn-rebuy:hover {
+      transform: scale(1.05);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 820px) {
+      .table-wrapper {
+        min-height: 480px;
+      }
+      .seat {
+        width: 110px;
+      }
+      .card {
+        width: 46px;
+        height: 66px;
+      }
+      .card-placeholder {
+        width: 46px;
+        height: 66px;
+      }
+      .card-val {
+        font-size: 0.8rem;
+      }
+      .card-suit-center {
+        font-size: 1.1rem;
+      }
+      .player-name {
+        max-width: 70px;
+        font-size: 0.75rem;
+      }
+      .player-chips {
+        font-size: 0.85rem;
+      }
+      .action-panel {
+        padding: 8px 12px;
+      }
+      .btn-action {
+        padding: 10px 8px;
+        font-size: 0.85rem;
+      }
+    }
+
+    @media (max-width: 640px) {
+      header {
+        padding: 6px 10px;
+      }
+      .brand-title {
+        font-size: 0.95rem;
+      }
+      .table-wrapper {
+        aspect-ratio: 1 / 1.35;
+        min-height: 460px;
+        max-height: 520px;
+      }
+      .poker-table {
+        border-radius: 100px;
+      }
+      .seat-0 { bottom: -20px; }
+      .seat-1 { left: -5px; }
+      .seat-2 { top: -20px; }
+      .seat-3 { right: -5px; }
+      .seat-1 .player-bet-chip { right: -25px; top: 40px; }
+      .seat-3 .player-bet-chip { left: -25px; top: 40px; }
+      .community-cards {
+        gap: 4px;
+      }
+      .card {
+        width: 40px;
+        height: 58px;
+      }
+      .card-placeholder {
+        width: 40px;
+        height: 58px;
+      }
+      .action-panel-wrapper {
+        position: sticky;
+        bottom: 0;
+        margin-top: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Bar Controls -->
+  <header>
+    <div class="brand">
+      <svg class="brand-logo" viewBox="0 0 24 24">
+        <path d="M12 2L9.1 8.2 2 9.27l5.18 5.05L5.82 22 12 18.4 18.18 22l-1.36-7.68L22 9.27l-7.1-1.07L12 2z"/>
+      </svg>
+      <span class="brand-title">Texas Hold'em</span>
+    </div>
+    <div class="header-controls">
+      <button class="btn-icon" id="speedToggleBtn" title="Переключить скорость анимаций">
+        <span>⚡</span> <span id="speedLabel">1x</span>
+      </button>
+      <button class="btn-icon" id="soundToggleBtn" title="Включить / Выключить звук">
+        <span id="soundIcon">🔊</span>
+      </button>
+      <button class="btn-icon" id="cheatSheetBtn" title="Шпаргалка покерных комбинаций">
+        <span>🏆</span> <span>Комбинации</span>
+      </button>
+      <button class="btn-icon" id="logModalBtn" title="История раздач">
+        <span>📜</span> <span>Лог</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Game Layout -->
+  <main class="arena-container">
+    <div class="table-wrapper">
+      <div class="poker-table">
+        <div class="table-center-line"></div>
+
+        <!-- Center: Pot and Community Cards -->
+        <div class="table-center">
+          <div class="stage-badge" id="stageBadge">Пре-флоп</div>
+          <div class="pot-display">
+            <span class="pot-label">Общий банк</span>
+            <div class="pot-amount">
+              <span>🪙</span>
+              <span id="potValue">$0</span>
+            </div>
+            <div class="side-pots-container" id="sidePotsContainer"></div>
+          </div>
+
+          <div class="community-cards" id="communityCards">
+            <div class="card-placeholder"></div>
+            <div class="card-placeholder"></div>
+            <div class="card-placeholder"></div>
+            <div class="card-placeholder"></div>
+            <div class="card-placeholder"></div>
+          </div>
+        </div>
+
+        <!-- 4 Player Seats -->
+        <!-- Seat 0: Human Player (Bottom) -->
+        <div class="seat seat-0" id="seat-0">
+          <div class="hand-eval-badge" id="humanHandEval" style="display: none;">Старшая карта</div>
+          <div class="player-card-container" id="cards-0"></div>
+          <div class="player-box">
+            <div class="player-info-row">
+              <span class="player-name" id="name-0">Вы (Игрок)</span>
+            </div>
+            <div class="player-chips" id="chips-0">$1,000</div>
+            <div class="player-status-badge" id="status-0">Ожидание</div>
+          </div>
+          <div class="player-bet-chip" id="bet-0" style="display: none;">$0</div>
+        </div>
+
+        <!-- Seat 1: Viktor "Skala" (Left) -->
+        <div class="seat seat-1" id="seat-1">
+          <div class="player-card-container" id="cards-1"></div>
+          <div class="player-box">
+            <div class="player-info-row">
+              <span class="player-name" id="name-1">Виктор</span>
+            </div>
+            <div class="player-chips" id="chips-1">$1,000</div>
+            <div class="player-status-badge" id="status-1">Ожидание</div>
+          </div>
+          <div class="player-bet-chip" id="bet-1" style="display: none;">$0</div>
+        </div>
+
+        <!-- Seat 2: Elena "Akula" (Top) -->
+        <div class="seat seat-2" id="seat-2">
+          <div class="player-card-container" id="cards-2"></div>
+          <div class="player-box">
+            <div class="player-info-row">
+              <span class="player-name" id="name-2">Елена</span>
+            </div>
+            <div class="player-chips" id="chips-2">$1,000</div>
+            <div class="player-status-badge" id="status-2">Ожидание</div>
+          </div>
+          <div class="player-bet-chip" id="bet-2" style="display: none;">$0</div>
+        </div>
+
+        <!-- Seat 3: Max "Joker" (Right) -->
+        <div class="seat seat-3" id="seat-3">
+          <div class="player-card-container" id="cards-3"></div>
+          <div class="player-box">
+            <div class="player-info-row">
+              <span class="player-name" id="name-3">Макс</span>
+            </div>
+            <div class="player-chips" id="chips-3">$1,000</div>
+            <div class="player-status-badge" id="status-3">Ожидание</div>
+          </div>
+          <div class="player-bet-chip" id="bet-3" style="display: none;">$0</div>
+        </div>
+
+        <!-- Winner Popup Banner -->
+        <div class="winner-banner" id="winnerBanner">
+          <div class="winner-title" id="winnerTitle">Победитель!</div>
+          <div class="winner-desc" id="winnerDesc">Собрана комбинация Фулл-хаус</div>
+          <div class="winner-amount" id="winnerAmount">+$350</div>
+          <button class="btn-next-hand" id="btnNextHand">Следующая раздача</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Panel for Human Player -->
+    <div class="action-panel-wrapper">
+      <div class="action-panel disabled" id="actionPanel">
+        <div class="bet-slider-row">
+          <input type="range" class="bet-slider" id="betSlider" min="20" max="1000" step="10" value="20">
+          <div class="bet-value-box" id="betValueDisplay">$20</div>
+        </div>
+        <div class="bet-presets">
+          <button class="btn-preset" id="presetMin">Мин ($20)</button>
+          <button class="btn-preset" id="preset2x">2x</button>
+          <button class="btn-preset" id="presetHalfPot">1/2 Пота</button>
+          <button class="btn-preset" id="presetPot">Пот</button>
+          <button class="btn-preset" id="presetAllIn">Ва-банк</button>
+        </div>
+        <div class="main-actions-row">
+          <button class="btn-action btn-fold" id="btnFold">
+            <span>Сброс</span>
+            <span class="sub-amt">Fold</span>
+          </button>
+          <button class="btn-action btn-check-call" id="btnCheckCall">
+            <span id="btnCheckCallLabel">Чек</span>
+            <span class="sub-amt" id="btnCheckCallAmount"></span>
+          </button>
+          <button class="btn-action btn-bet-raise" id="btnBetRaise">
+            <span id="btnBetRaiseLabel">Ставка</span>
+            <span class="sub-amt" id="btnBetRaiseAmount">$20</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Cheat Sheet Modal -->
+  <div class="modal-overlay" id="cheatSheetModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">🏆 Иерархия комбинаций покера</div>
+        <button class="modal-close" data-close="cheatSheetModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="rank-item">
+          <div class="rank-name-box">
+            <div class="rank-number">1. Ранг #9 (Самая сильная)</div>
+            <div class="rank-name">Роял-флеш (Royal Flush)</div>
+            <div class="rank-desc">Туз, Король, Дама, Валет и Десятка одной масти.</div>
+          </div>
+          <div class="rank-cards-mini">
+            <div class="mini-card red">A♥</div>
+            <div class="mini-card red">K♥</div>
+            <div class="mini-card red">Q♥</div>
+            <div class="mini-card red">J♥</div>
+            <div class="mini-card red">T♥</div>
+          </div>
+        </div>
+
+        <div class="rank-item">
+          <div class="rank-name-box">
+            <div class="rank-number">2. Ранг #8</div>
+            <div class="rank-name">Стрит-флеш (Straight Flush)</div>
+            <div class="rank-desc">Пять карт одной масти по порядку (например, 9-8-7-6-5 пик).</div>
+          </div>
+          <div class="rank-cards-mini">
+            <div class="mini-card">9♠</div>
+            <div class="mini-card">8♠</div>
+            <div class="mini-card">7♠</div>
+            <div class="mini-card">6♠</div>
+            <div class="mini-card">5♠</div>
+          </div>
+        </div>
+
+        <div class="rank-item">
+          <div class="rank-name-box">
+            <div class="rank-number">3. Ранг #7</div>
+            <div class="rank-name">Каре (Four of a Kind)</div>
+            <div class="rank-desc">Четыре карты одного достоинства.</div>
+          </div>
+          <div class="rank-cards-mini">
+            <div class="mini-card red">K♦</div>
+            <div class="mini-card red">K♥</div>
+            <div class="mini-card">K♠</div>
+            <div class="mini-card">K♣</div>
+            <div class="mini-card">4♠</div>
+          </div>
+        </div>
+
+        <div class="rank-item">
+          <div class="rank-name-box">
+            <div class="rank-number">4. Ранг #6</div>
+            <div class="rank-name">Фулл-хаус (Full House)</div>
+            <div class="rank-desc">Три карты одного достоинства + две карты другого (Тройка + Пара).</div>
+          </div>
+          <div class="rank-cards-mini">
+            <div class="mini-card red">Q♥</div>
+            <div class="mini-card red">Q♦</div>
+            <div class="mini-card">Q♠</div>
+            <div class="mini-card">8♣</div>
+            <div class="mini-card red">8♥</div>
+          </div>
+        </div>
+
+        <div class="rank-item">
+          <div class="rank-name-box">
+            <div class="rank-number">5. Ранг #5</div>
+            <div class="rank-name">Флеш (Flush)</div>
+            <div class="rank-desc">Любые пять карт одной масти (не по порядку).</div>
+          </div>
+          <div class="rank-cards-mini">
+            <div class="mini-card red">A♦</div>
+            <div class="mini-card red">J♦</div>
+            <div class="mini-card red">8♦</div>
+            <div class="mini-card red">6♦</div>
+            <div class="mini-card red">3♦</div>
+          </div>
+        </div>
+
+        <div class="rank-item">
+          <div class="rank-name-box">
+            <div class="rank-number">6. Ранг #4</div>
+            <div class="rank-name">Стрит (Straight)</div>
+            <div class="rank-desc">Пять карт разных мастей по порядку (Туз может быть как высшей, так и низшей картой: A-2-3-4-5).</div>
+          </div>
+          <div class="rank-cards-mini">
+            <div class="mini-card red">J♥</div>
+            <div class="mini-card">T♠</div>
+            <div class="mini-card red">9♦</div>
+            <div class="mini-card">8♣</div>
+            <div class="mini-card red">7♥</div>
+          </div>
+        </div>
+
+        <div class="rank-item">
+          <div class="rank-name-box">
+            <div class="rank-number">7. Ранг #3</div>
+            <div class="rank-name">Сет / Тройка (Three of a Kind)</div>
+            <div class="rank-desc">Три карты одного достоинства.</div>
+          </div>
+          <div class="rank-cards-mini">
+            <div class="mini-card">7♠</div>
+            <div class="mini-card red">7♥</div>
+            <div class="mini-card red">7♦</div>
+            <div class="mini-card">K♣</div>
+            <div class="mini-card red">2♦</div>
+          </div>
+        </div>
+
+        <div class="rank-item">
+          <div class="rank-name-box">
+            <div class="rank-number">8. Ранг #2</div>
+            <div class="rank-name">Две пары (Two Pair)</div>
+            <div class="rank-desc">Две карты одного достоинства и две другого.</div>
+          </div>
+          <div class="rank-cards-mini">
+            <div class="mini-card red">A♥</div>
+            <div class="mini-card">A♠</div>
+            <div class="mini-card">9♣</div>
+            <div class="mini-card red">9♦</div>
+            <div class="mini-card red">5♥</div>
+          </div>
+        </div>
+
+        <div class="rank-item">
+          <div class="rank-name-box">
+            <div class="rank-number">9. Ранг #1</div>
+            <div class="rank-name">Одна пара (One Pair)</div>
+            <div class="rank-desc">Две карты одного достоинства.</div>
+          </div>
+          <div class="rank-cards-mini">
+            <div class="mini-card">T♠</div>
+            <div class="mini-card red">T♥</div>
+            <div class="mini-card red">K♦</div>
+            <div class="mini-card">8♣</div>
+            <div class="mini-card red">4♥</div>
+          </div>
+        </div>
+
+        <div class="rank-item">
+          <div class="rank-name-box">
+            <div class="rank-number">10. Ранг #0</div>
+            <div class="rank-name">Старшая карта (High Card)</div>
+            <div class="rank-desc">Если нет ни одной комбинации, побеждает обладатель самой старшей карты.</div>
+          </div>
+          <div class="rank-cards-mini">
+            <div class="mini-card red">A♦</div>
+            <div class="mini-card">Q♠</div>
+            <div class="mini-card red">9♥</div>
+            <div class="mini-card">5♣</div>
+            <div class="mini-card red">2♦</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Log History Modal -->
+  <div class="modal-overlay" id="logModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">📜 Лог событий игры</div>
+        <button class="modal-close" data-close="logModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="log-list" id="logList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rebuy Modal -->
+  <div class="modal-overlay" id="rebuyModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">💸 Докупка фишек (Rebuy)</div>
+      </div>
+      <div class="modal-body rebuy-box">
+        <div class="rebuy-icon">🎰</div>
+        <h3>Ваш баланс фишек исчерпан!</h3>
+        <p>Казино предоставляет вам дополнительный банкролл для продолжения игры.</p>
+        <button class="btn-rebuy" id="btnRebuy">Получить $1,000</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vanilla JS Poker Engine & Modules -->
+  <script>
+    'use strict';
+
+    /* ==========================================================================
+       1. SOUND ENGINE (Web Audio API Synthesizer)
+       ========================================================================== */
+    class SoundEngine {
+      constructor() {
+        this.ctx = null;
+        this.muted = localStorage.getItem('poker_muted') === 'true';
+      }
+
+      initContext() {
+        if (!this.ctx) {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            this.ctx = new AudioContextClass();
+          }
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      toggleMute() {
+        this.muted = !this.muted;
+        localStorage.setItem('poker_muted', this.muted);
+        return this.muted;
+      }
+
+      playCardSlide() {
+        if (this.muted) return;
+        this.initContext();
+        if (!this.ctx) return;
+        try {
+          const bufferSize = Math.floor(this.ctx.sampleRate * 0.07);
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = buffer;
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.frequency.value = 1100;
+          filter.Q.value = 1.8;
+
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.07);
+
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+          noise.start();
+        } catch (e) {}
+      }
+
+      playChipClack() {
+        if (this.muted) return;
+        this.initContext();
+        if (!this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(2400, now);
+          osc.frequency.exponentialRampToValueAtTime(450, now + 0.045);
+
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.045);
+        } catch (e) {}
+      }
+
+      playCheck() {
+        if (this.muted) return;
+        this.initContext();
+        if (!this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          [0, 0.09].forEach(delay => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(140, now + delay);
+            osc.frequency.exponentialRampToValueAtTime(50, now + delay + 0.04);
+            gain.gain.setValueAtTime(0.4, now + delay);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + delay + 0.04);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + delay);
+            osc.stop(now + delay + 0.04);
+          });
+        } catch (e) {}
+      }
+
+      playFold() {
+        if (this.muted) return;
+        this.initContext();
+        if (!this.ctx) return;
+        try {
+          const bufferSize = Math.floor(this.ctx.sampleRate * 0.12);
+          const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / bufferSize);
+
+          const noise = this.ctx.createBufferSource();
+          noise.buffer = buffer;
+          const filter = this.ctx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(600, this.ctx.currentTime);
+          filter.frequency.exponentialRampToValueAtTime(150, this.ctx.currentTime + 0.12);
+
+          const gain = this.ctx.createGain();
+          gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.12);
+
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+          noise.start();
+        } catch (e) {}
+      }
+
+      playWin() {
+        if (this.muted) return;
+        this.initContext();
+        if (!this.ctx) return;
+        try {
+          const now = this.ctx.currentTime;
+          const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+          notes.forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+            gain.gain.setValueAtTime(0.25, now + idx * 0.08);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.35);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + idx * 0.08);
+            osc.stop(now + idx * 0.08 + 0.35);
+          });
+        } catch (e) {}
+      }
+    }
+
+    /* ==========================================================================
+       2. POKER EVALUATOR ENGINE (7-Card Combinations & Hand Ranking)
+       ========================================================================== */
+    const PokerEvaluator = {
+      rankNames: [
+        'Старшая карта',
+        'Одна пара',
+        'Две пары',
+        'Сет (Тройка)',
+        'Стрит',
+        'Флеш',
+        'Фулл-хаус',
+        'Каре',
+        'Стрит-флеш',
+        'Роял-флеш'
+      ],
+
+      valueNames: {
+        2: 'Двойка', 3: 'Тройка', 4: 'Четверка', 5: 'Пятерка', 6: 'Шестерка',
+        7: 'Семерка', 8: 'Восьмерка', 9: 'Девятка', 10: 'Десятка',
+        11: 'Валет', 12: 'Дама', 13: 'Король', 14: 'Туз'
+      },
+
+      valuePlurals: {
+        2: 'Двойки', 3: 'Тройки', 4: 'Четверки', 5: 'Пятерки', 6: 'Шестерки',
+        7: 'Семерки', 8: 'Восьмерки', 9: 'Девятки', 10: 'Десятки',
+        11: 'Валеты', 12: 'Дамы', 13: 'Короли', 14: 'Тузы'
+      },
+
+      /**
+       * Evaluates an exact 5-card hand.
+       * @param {Card[]} hand 5 cards
+       * @returns {{rank: number, score: number[], name: string, best5: Card[]}}
+       */
+      evaluate5CardHand(hand) {
+        const sorted = [...hand].sort((a, b) => b.value - a.value);
+        const values = sorted.map(c => c.value);
+        const suits = sorted.map(c => c.suit);
+
+        const isFlush = suits.every(s => s === suits[0]);
+
+        // Straight calculation (including wheel A-2-3-4-5)
+        let isStraight = false;
+        let straightHigh = 0;
+
+        const uniqueVals = Array.from(new Set(values));
+        if (uniqueVals.length === 5) {
+          if (uniqueVals[0] - uniqueVals[4] === 4) {
+            isStraight = true;
+            straightHigh = uniqueVals[0];
+          } else if (
+            uniqueVals[0] === 14 &&
+            uniqueVals[1] === 5 &&
+            uniqueVals[2] === 4 &&
+            uniqueVals[3] === 3 &&
+            uniqueVals[4] === 2
+          ) {
+            // Ace-low straight
+            isStraight = true;
+            straightHigh = 5;
+          }
+        }
+
+        // Value Frequencies
+        const freqMap = {};
+        for (let v of values) {
+          freqMap[v] = (freqMap[v] || 0) + 1;
+        }
+
+        const groups = Object.entries(freqMap).map(([val, count]) => ({
+          val: Number(val),
+          count
+        }));
+        // Sort groups: highest count first, then highest card value
+        groups.sort((a, b) => b.count - a.count || b.val - a.val);
+
+        // 9. Royal Flush & 8. Straight Flush
+        if (isFlush && isStraight) {
+          if (straightHigh === 14) {
+            return {
+              rank: 9,
+              score: [9, 14],
+              name: 'Роял-флеш',
+              best5: sorted
+            };
+          }
+          return {
+            rank: 8,
+            score: [8, straightHigh],
+            name: `Стрит-флеш (до ${this.valueNames[straightHigh]})`,
+            best5: sorted
+          };
+        }
+
+        // 7. Four of a Kind
+        if (groups[0].count === 4) {
+          return {
+            rank: 7,
+            score: [7, groups[0].val, groups[1].val],
+            name: `Каре (${this.valuePlurals[groups[0].val]})`,
+            best5: sorted
+          };
+        }
+
+        // 6. Full House
+        if (groups[0].count === 3 && groups[1].count === 2) {
+          return {
+            rank: 6,
+            score: [6, groups[0].val, groups[1].val],
+            name: `Фулл-хаус (${this.valuePlurals[groups[0].val]} и ${this.valuePlurals[groups[1].val]})`,
+            best5: sorted
+          };
+        }
+
+        // 5. Flush
+        if (isFlush) {
+          return {
+            rank: 5,
+            score: [5, ...values],
+            name: `Флеш (старшая ${this.valueNames[values[0]]})`,
+            best5: sorted
+          };
+        }
+
+        // 4. Straight
+        if (isStraight) {
+          return {
+            rank: 4,
+            score: [4, straightHigh],
+            name: `Стрит (до ${this.valueNames[straightHigh]})`,
+            best5: sorted
+          };
+        }
+
+        // 3. Three of a Kind
+        if (groups[0].count === 3) {
+          const kickers = groups.slice(1).map(g => g.val).sort((a, b) => b - a);
+          return {
+            rank: 3,
+            score: [3, groups[0].val, ...kickers],
+            name: `Сет (${this.valuePlurals[groups[0].val]})`,
+            best5: sorted
+          };
+        }
+
+        // 2. Two Pair
+        if (groups[0].count === 2 && groups[1].count === 2) {
+          const kicker = groups[2].val;
+          return {
+            rank: 2,
+            score: [2, groups[0].val, groups[1].val, kicker],
+            name: `Две пары (${this.valuePlurals[groups[0].val]} и ${this.valuePlurals[groups[1].val]})`,
+            best5: sorted
+          };
+        }
+
+        // 1. One Pair
+        if (groups[0].count === 2) {
+          const kickers = groups.slice(1).map(g => g.val).sort((a, b) => b - a);
+          return {
+            rank: 1,
+            score: [1, groups[0].val, ...kickers],
+            name: `Пара (${this.valuePlurals[groups[0].val]})`,
+            best5: sorted
+          };
+        }
+
+        // 0. High Card
+        return {
+          rank: 0,
+          score: [0, ...values],
+          name: `Старшая карта (${this.valueNames[values[0]]})`,
+          best5: sorted
+        };
+      },
+
+      /**
+       * Compares two score vectors lexicographically.
+       * Returns > 0 if A > B, < 0 if A < B, 0 if tie.
+       */
+      compareScores(scoreA, scoreB) {
+        for (let i = 0; i < Math.max(scoreA.length, scoreB.length); i++) {
+          const valA = scoreA[i] || 0;
+          const valB = scoreB[i] || 0;
+          if (valA !== valB) {
+            return valA - valB;
+          }
+        }
+        return 0;
+      },
+
+      /**
+       * Evaluates best 5-card combination from 5, 6, or 7 cards.
+       * @param {Card[]} cards 
+       */
+      evaluateBestHand(cards) {
+        if (!cards || cards.length < 5) {
+          if (cards && cards.length === 2) {
+            // Hole cards preview
+            const sorted = [...cards].sort((a, b) => b.value - a.value);
+            if (sorted[0].value === sorted[1].value) {
+              return {
+                rank: 1,
+                score: [1, sorted[0].value],
+                name: `Пара (${this.valuePlurals[sorted[0].value]})`,
+                best5: sorted
+              };
+            }
+            return {
+              rank: 0,
+              score: [0, sorted[0].value, sorted[1].value],
+              name: `Старшая карта (${this.valueNames[sorted[0].value]})`,
+              best5: sorted
+            };
+          }
+          return { rank: 0, score: [0], name: '—', best5: [] };
+        }
+
+        // Generate combinations of 5 from N cards
+        const k = 5;
+        const n = cards.length;
+        const combinations = [];
+
+        function generateCombinations(start, current) {
+          if (current.length === k) {
+            combinations.push([...current]);
+            return;
+          }
+          for (let i = start; i < n; i++) {
+            current.push(cards[i]);
+            generateCombinations(i + 1, current);
+            current.pop();
+          }
+        }
+
+        generateCombinations(0, []);
+
+        let bestResult = null;
+        for (let combo of combinations) {
+          const evalRes = this.evaluate5CardHand(combo);
+          if (!bestResult || this.compareScores(evalRes.score, bestResult.score) > 0) {
+            bestResult = evalRes;
+          }
+        }
+
+        return bestResult;
+      }
+    };
+
+    /* ==========================================================================
+       3. BOT AI MODULE (Decision Matrix & Archetypes)
+       ========================================================================== */
+    const PokerAI = {
+      /**
+       * Determines preflop tier for two hole cards.
+       * @param {Card[]} cards 
+       * @returns {number} 1 (best) to 4 (trash)
+       */
+      getPreflopTier(cards) {
+        if (!cards || cards.length !== 2) return 4;
+        const [c1, c2] = cards;
+        const isPair = c1.value === c2.value;
+        const isSuited = c1.suit === c2.suit;
+        const high = Math.max(c1.value, c2.value);
+        const low = Math.min(c1.value, c2.value);
+
+        // Tier 1: AA, KK, QQ, JJ, AKs, AKo
+        if (isPair && high >= 11) return 1;
+        if (high === 14 && low === 13) return 1;
+
+        // Tier 2: TT-77, AQ, AJ, ATs, KQ
+        if (isPair && high >= 7) return 2;
+        if (high === 14 && low >= 11) return 2;
+        if (high === 14 && low === 10 && isSuited) return 2;
+        if (high === 13 && low === 12) return 2;
+
+        // Tier 3: 66-22, suited connectors (89s, 9Ts, JTs, QJs, etc.)
+        if (isPair) return 3;
+        if (isSuited && (high - low === 1) && low >= 5) return 3;
+        if (isSuited && high >= 12) return 3;
+        if (high >= 13 && low >= 10) return 3;
+
+        // Tier 4: Trash
+        return 4;
+      },
+
+      /**
+       * Analyzes draws on postflop
+       */
+      getDrawPotential(holeCards, communityCards) {
+        const allCards = [...holeCards, ...communityCards];
+        // Flush draw check
+        const suitCounts = {};
+        for (let c of allCards) {
+          suitCounts[c.suit] = (suitCounts[c.suit] || 0) + 1;
+        }
+        const hasFlushDraw = Object.values(suitCounts).some(cnt => cnt === 4);
+
+        // Open-ended straight draw check
+        const uniqueValues = Array.from(new Set(allCards.map(c => c.value))).sort((a, b) => a - b);
+        let hasStraightDraw = false;
+        for (let i = 0; i <= uniqueValues.length - 4; i++) {
+          if (uniqueValues[i + 3] - uniqueValues[i] === 3) {
+            hasStraightDraw = true;
+            break;
+          }
+        }
+
+        return { hasFlushDraw, hasStraightDraw };
+      },
+
+      /**
+       * Computes AI Action
+       * @param {Player} player 
+       * @param {GameState} state 
+       */
+      decideAction(player, state) {
+        const toCall = state.currentBet - player.currentBet;
+        const potSize = state.pot;
+        const currentStreet = state.stage;
+        const tier = this.getPreflopTier(player.cards);
+        const arche = player.archetype; // 'tight', 'aggressive', 'loose'
+        const randomRoll = Math.random();
+
+        // If player has only enough to call or is forced All-In
+        if (player.chips <= toCall) {
+          if (toCall === 0) return { type: 'CHECK' };
+          // If trash hand and tight, fold; else All-In Call
+          if (arche === 'tight' && tier === 4 && toCall > state.bigBlind) {
+            return { type: 'FOLD' };
+          }
+          return { type: 'CALL' };
+        }
+
+        // ================= PREFLOP =================
+        if (currentStreet === 'PREFLOP') {
+          if (arche === 'tight') {
+            // VPIP ~15%: Only Tier 1 and 2
+            if (tier > 2) {
+              if (toCall === 0) return { type: 'CHECK' };
+              return { type: 'FOLD' };
+            }
+            if (tier === 1) {
+              if (toCall > 0 && randomRoll < 0.4) {
+                const raiseAmt = Math.min(player.chips, state.currentBet + state.minRaise * 2);
+                return { type: 'RAISE', amount: raiseAmt };
+              }
+              return toCall === 0 ? { type: 'CHECK' } : { type: 'CALL' };
+            }
+            // Tier 2
+            if (toCall <= state.bigBlind * 3) {
+              return toCall === 0 ? { type: 'CHECK' } : { type: 'CALL' };
+            }
+            return { type: 'FOLD' };
+          }
+
+          if (arche === 'aggressive') {
+            // VPIP ~35%: Tier 1-3
+            if (tier === 1) {
+              // 70% Raise
+              if (randomRoll < 0.7) {
+                const raiseAmt = Math.min(player.chips, state.currentBet + state.minRaise * 2);
+                return { type: 'RAISE', amount: raiseAmt };
+              }
+              return { type: 'CALL' };
+            }
+            if (tier === 2) {
+              if (toCall <= state.bigBlind * 4) {
+                if (randomRoll < 0.4) {
+                  const raiseAmt = Math.min(player.chips, state.currentBet + state.minRaise);
+                  return { type: 'RAISE', amount: raiseAmt };
+                }
+                return toCall === 0 ? { type: 'CHECK' } : { type: 'CALL' };
+              }
+              return { type: 'FOLD' };
+            }
+            if (tier === 3) {
+              if (toCall <= state.bigBlind * 2) {
+                return toCall === 0 ? { type: 'CHECK' } : { type: 'CALL' };
+              }
+              return { type: 'FOLD' };
+            }
+            // Tier 4 Bluff raise occasionally
+            if (toCall === 0 && randomRoll < 0.15) {
+              return { type: 'RAISE', amount: Math.min(player.chips, state.bigBlind * 2) };
+            }
+            return toCall === 0 ? { type: 'CHECK' } : { type: 'FOLD' };
+          }
+
+          if (arche === 'loose') {
+            // VPIP ~65%: Tier 1-4
+            if (tier <= 3) {
+              if (randomRoll < 0.35) {
+                const raiseAmt = Math.min(player.chips, state.currentBet + state.minRaise);
+                return { type: 'RAISE', amount: raiseAmt };
+              }
+              return toCall === 0 ? { type: 'CHECK' } : { type: 'CALL' };
+            }
+            // Tier 4
+            if (toCall <= state.bigBlind * 2 || (toCall === 0 && randomRoll < 0.6)) {
+              return toCall === 0 ? { type: 'CHECK' } : { type: 'CALL' };
+            }
+            return { type: 'FOLD' };
+          }
+        }
+
+        // ================= POSTFLOP =================
+        const bestHand = PokerEvaluator.evaluateBestHand([...player.cards, ...state.communityCards]);
+        const draws = this.getDrawPotential(player.cards, state.communityCards);
+        const rank = bestHand.rank; // 0: High Card .. 9: Royal Flush
+
+        // Helper for raise calculation
+        const getStandardRaise = (multiplier = 1) => {
+          const step = Math.max(state.minRaise, Math.floor((potSize * 0.5) / 10) * 10);
+          const target = state.currentBet + step * multiplier;
+          return Math.min(player.chips, target);
+        };
+
+        if (arche === 'tight') {
+          // Plays only when hitting Pair+ or strong made hands
+          if (rank >= 3) { // Three of a Kind or better
+            if (randomRoll < 0.6) return { type: 'RAISE', amount: getStandardRaise(1.5) };
+            return toCall === 0 ? { type: 'CHECK' } : { type: 'CALL' };
+          }
+          if (rank === 2 || rank === 1) { // Two Pair or Pair
+            if (toCall <= potSize * 0.4) {
+              return toCall === 0 ? { type: 'CHECK' } : { type: 'CALL' };
+            }
+            return { type: 'FOLD' };
+          }
+          // Air or High card
+          if (toCall === 0) return { type: 'CHECK' };
+          return { type: 'FOLD' };
+        }
+
+        if (arche === 'aggressive') {
+          // High C-bet & Bluffing
+          if (rank >= 2) {
+            // Strong hand
+            if (randomRoll < 0.7) return { type: 'RAISE', amount: getStandardRaise(2) };
+            return toCall === 0 ? { type: 'CHECK' } : { type: 'CALL' };
+          }
+          if (rank === 1 || draws.hasFlushDraw || draws.hasStraightDraw) {
+            // Decent hand or strong draw
+            if (toCall === 0 && randomRoll < 0.6) {
+              return { type: 'RAISE', amount: getStandardRaise(1) };
+            }
+            if (toCall <= potSize * 0.6) {
+              return toCall === 0 ? { type: 'CHECK' } : { type: 'CALL' };
+            }
+            return { type: 'FOLD' };
+          }
+          // Pure Bluff (25% rate)
+          if (toCall === 0 && randomRoll < 0.25) {
+            return { type: 'RAISE', amount: getStandardRaise(1) };
+          }
+          return toCall === 0 ? { type: 'CHECK' } : { type: 'FOLD' };
+        }
+
+        if (arche === 'loose') {
+          // Wildcard: Shoves on draws or random calls
+          if (rank >= 3) {
+            if (randomRoll < 0.5) return { type: 'RAISE', amount: getStandardRaise(2) };
+            return toCall === 0 ? { type: 'CHECK' } : { type: 'CALL' };
+          }
+          if (draws.hasFlushDraw || draws.hasStraightDraw) {
+            if (randomRoll < 0.4) {
+              // Wild All-In or heavy raise on draw
+              return { type: 'RAISE', amount: getStandardRaise(2.5) };
+            }
+            return toCall === 0 ? { type: 'CHECK' } : { type: 'CALL' };
+          }
+          if (rank >= 1) {
+            if (toCall <= potSize * 0.7) {
+              return toCall === 0 ? { type: 'CHECK' } : { type: 'CALL' };
+            }
+          }
+          // Bluff (40% rate)
+          if (randomRoll < 0.4 && toCall <= state.bigBlind * 3) {
+            return toCall === 0 ? { type: 'CHECK' } : { type: 'CALL' };
+          }
+          return toCall === 0 ? { type: 'CHECK' } : { type: 'FOLD' };
+        }
+
+        return toCall === 0 ? { type: 'CHECK' } : { type: 'FOLD' };
+      }
+    };
+
+    /* ==========================================================================
+       4. POKER ENGINE (State Machine, Round Manager, Side Pots)
+       ========================================================================== */
+    class PokerEngine {
+      constructor(uiCallback) {
+        this.ui = uiCallback;
+        this.sound = new SoundEngine();
+
+        this.smallBlind = 10;
+        this.bigBlind = 20;
+        this.gameSpeed = 1; // 1x or 2x
+        this.handCount = 0;
+
+        this.players = [
+          { id: 0, name: 'Вы (Игрок)', archetype: 'human', chips: 1000, currentBet: 0, totalBetInHand: 0, cards: [], folded: false, isAllIn: false, isDealer: false },
+          { id: 1, name: 'Виктор', archetype: 'tight', chips: 1000, currentBet: 0, totalBetInHand: 0, cards: [], folded: false, isAllIn: false, isDealer: false },
+          { id: 2, name: 'Елена', archetype: 'aggressive', chips: 1000, currentBet: 0, totalBetInHand: 0, cards: [], folded: false, isAllIn: false, isDealer: false },
+          { id: 3, name: 'Макс', archetype: 'loose', chips: 1000, currentBet: 0, totalBetInHand: 0, cards: [], folded: false, isAllIn: false, isDealer: false }
+        ];
+
+        this.dealerIdx = 0;
+        this.activePlayerIdx = 0;
+        this.deck = [];
+        this.communityCards = [];
+        this.stage = 'IDLE'; // 'PREFLOP' | 'FLOP' | 'TURN' | 'RIVER' | 'SHOWDOWN' | 'IDLE'
+        this.pot = 0;
+        this.sidePots = [];
+        this.currentBet = 0;
+        this.minRaise = this.bigBlind;
+        this.lastRaisePlayerIdx = -1;
+        this.playersActedThisRound = new Set();
+        this.logs = [];
+
+        this.isProcessing = false;
+      }
+
+      getDelay(ms) {
+        return ms / this.gameSpeed;
+      }
+
+      log(text, type = 'log-action') {
+        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const entry = { time, text, type, stage: this.stage };
+        this.logs.unshift(entry);
+        if (this.ui && this.ui.onLogUpdate) {
+          this.ui.onLogUpdate(entry, this.logs);
+        }
+      }
+
+      /**
+       * Crypto-safe Fisher-Yates shuffle
+       */
+      createAndShuffleDeck() {
+        const suits = ['H', 'D', 'C', 'S'];
+        const deck = [];
+        for (let s of suits) {
+          for (let v = 2; v <= 14; v++) {
+            deck.push({ suit: s, value: v });
+          }
+        }
+        const array = new Uint32Array(deck.length);
+        window.crypto.getRandomValues(array);
+        for (let i = deck.length - 1; i > 0; i--) {
+          const j = array[i] % (i + 1);
+          [deck[i], deck[j]] = [deck[j], deck[i]];
+        }
+        return deck;
+      }
+
+      /**
+       * Starts a brand new hand
+       */
+      startNewHand() {
+        // Auto-rebuy for bots if they went broke so game never stops
+        for (let p of this.players) {
+          if (p.id !== 0 && p.chips <= 0) {
+            p.chips = 1000;
+            this.log(`${p.name} пополнил баланс на $1,000`, 'log-blind');
+          }
+        }
+
+        // Check if human player is broke
+        if (this.players[0].chips <= 0) {
+          if (this.ui && this.ui.showRebuyModal) {
+            this.ui.showRebuyModal();
+          }
+          return;
+        }
+
+        this.handCount++;
+        this.log(`--- Раздача #${this.handCount} ---`, 'log-blind');
+
+        // Reset Table State
+        this.deck = this.createAndShuffleDeck();
+        this.communityCards = [];
+        this.pot = 0;
+        this.sidePots = [];
+        this.currentBet = 0;
+        this.minRaise = this.bigBlind;
+        this.lastRaisePlayerIdx = -1;
+        this.stage = 'PREFLOP';
+
+        // Rotate Dealer Button
+        this.dealerIdx = (this.dealerIdx + 1) % this.players.length;
+        this.players.forEach((p, idx) => {
+          p.currentBet = 0;
+          p.totalBetInHand = 0;
+          p.cards = [];
+          p.folded = false;
+          p.isAllIn = false;
+          p.isDealer = (idx === this.dealerIdx);
+        });
+
+        // Deal 2 Hole Cards to each player
+        for (let i = 0; i < 2; i++) {
+          for (let p of this.players) {
+            p.cards.push(this.deck.pop());
+          }
+        }
+        this.sound.playCardSlide();
+
+        // Post Blinds
+        const sbIdx = (this.dealerIdx + 1) % this.players.length;
+        const bbIdx = (this.dealerIdx + 2) % this.players.length;
+
+        this.postBet(this.players[sbIdx], this.smallBlind, 'Малый блайнд');
+        this.postBet(this.players[bbIdx], this.bigBlind, 'Большой блайнд');
+        this.currentBet = this.bigBlind;
+
+        // Action starts after Big Blind (UTG)
+        this.activePlayerIdx = (this.dealerIdx + 3) % this.players.length;
+        this.playersActedThisRound = new Set();
+
+        this.notifyUI();
+        this.processNextTurn();
+      }
+
+      postBet(player, amount, label) {
+        const betAmount = Math.min(player.chips, amount);
+        player.chips -= betAmount;
+        player.currentBet += betAmount;
+        player.totalBetInHand += betAmount;
+        this.pot += betAmount;
+
+        if (player.chips === 0) {
+          player.isAllIn = true;
+          this.log(`${player.name}: Ва-банк $${betAmount} (${label})`, 'log-blind');
+        } else {
+          this.log(`${player.name}: ${label} $${betAmount}`, 'log-blind');
+        }
+        this.sound.playChipClack();
+      }
+
+      getActivePlayersCount() {
+        return this.players.filter(p => !p.folded).length;
+      }
+
+      getPlayersAbleToAct() {
+        return this.players.filter(p => !p.folded && !p.isAllIn);
+      }
+
+      /**
+       * Executes player action
+       */
+      handleAction(playerIdx, action) {
+        if (this.isProcessing && playerIdx === 0) return;
+        const player = this.players[playerIdx];
+        if (!player || player.folded || player.isAllIn) return;
+
+        this.playersActedThisRound.add(playerIdx);
+
+        switch (action.type) {
+          case 'FOLD':
+            player.folded = true;
+            this.log(`${player.name} сбросил карты (Fold)`, 'log-fold');
+            this.sound.playFold();
+            break;
+
+          case 'CHECK':
+            this.log(`${player.name} объявил Чек`, 'log-action');
+            this.sound.playCheck();
+            break;
+
+          case 'CALL': {
+            const toCall = this.currentBet - player.currentBet;
+            const callAmt = Math.min(player.chips, toCall);
+            player.chips -= callAmt;
+            player.currentBet += callAmt;
+            player.totalBetInHand += callAmt;
+            this.pot += callAmt;
+
+            if (player.chips === 0) {
+              player.isAllIn = true;
+              this.log(`${player.name} пошел Ва-банк ($${callAmt})`, 'log-action');
+            } else {
+              this.log(`${player.name} уравнял Колл $${callAmt}`, 'log-action');
+            }
+            this.sound.playChipClack();
+            break;
+          }
+
+          case 'RAISE': {
+            const targetBet = action.amount;
+            const addAmt = targetBet - player.currentBet;
+            const actualAdd = Math.min(player.chips, addAmt);
+
+            const prevCurrentBet = this.currentBet;
+            player.chips -= actualAdd;
+            player.currentBet += actualAdd;
+            player.totalBetInHand += actualAdd;
+            this.pot += actualAdd;
+
+            const raiseDiff = player.currentBet - prevCurrentBet;
+            if (raiseDiff > 0) {
+              this.minRaise = Math.max(this.bigBlind, raiseDiff);
+              this.currentBet = player.currentBet;
+              // Reset acted list since bet increased
+              this.playersActedThisRound = new Set([playerIdx]);
+              this.lastRaisePlayerIdx = playerIdx;
+            }
+
+            if (player.chips === 0) {
+              player.isAllIn = true;
+              this.log(`${player.name} сделал Рейз Ва-банк до $${player.currentBet}`, 'log-action');
+            } else {
+              this.log(`${player.name} повысил Рейз до $${player.currentBet}`, 'log-action');
+            }
+            this.sound.playChipClack();
+            break;
+          }
+        }
+
+        this.notifyUI();
+        this.checkRoundCompletion();
+      }
+
+      checkRoundCompletion() {
+        // 1. If only 1 player remains unfolded -> Instant Win
+        if (this.getActivePlayersCount() === 1) {
+          setTimeout(() => this.handleFoldWin(), this.getDelay(400));
+          return;
+        }
+
+        // 2. Check if betting round is complete
+        const nonFolded = this.players.filter(p => !p.folded);
+        const ableToAct = nonFolded.filter(p => !p.isAllIn);
+
+        const allMatched = nonFolded.every(p => p.isAllIn || p.currentBet === this.currentBet);
+        const everyoneActed = ableToAct.every(p => this.playersActedThisRound.has(p.id));
+
+        if ((allMatched && everyoneActed) || ableToAct.length <= 1 && allMatched) {
+          setTimeout(() => this.advanceStreet(), this.getDelay(500));
+        } else {
+          this.advanceTurn();
+        }
+      }
+
+      advanceTurn() {
+        let nextIdx = (this.activePlayerIdx + 1) % this.players.length;
+        let count = 0;
+        while ((this.players[nextIdx].folded || this.players[nextIdx].isAllIn) && count < this.players.length) {
+          nextIdx = (nextIdx + 1) % this.players.length;
+          count++;
+        }
+
+        this.activePlayerIdx = nextIdx;
+        this.notifyUI();
+        this.processNextTurn();
+      }
+
+      processNextTurn() {
+        const activePlayer = this.players[this.activePlayerIdx];
+        if (!activePlayer || activePlayer.folded || activePlayer.isAllIn) {
+          return;
+        }
+
+        if (activePlayer.id === 0) {
+          // Human turn: enable UI
+          this.isProcessing = false;
+          if (this.ui && this.ui.enableControls) {
+            this.ui.enableControls(this.calculateValidHumanActions());
+          }
+        } else {
+          // Bot Turn
+          this.isProcessing = true;
+          if (this.ui && this.ui.disableControls) {
+            this.ui.disableControls();
+          }
+
+          const thinkDelay = this.getDelay(600 + Math.random() * 500);
+          setTimeout(() => {
+            const decision = PokerAI.decideAction(activePlayer, this.getPublicGameState());
+            this.handleAction(activePlayer.id, decision);
+          }, thinkDelay);
+        }
+      }
+
+      calculateValidHumanActions() {
+        const human = this.players[0];
+        const toCall = this.currentBet - human.currentBet;
+        const canCheck = (toCall === 0);
+        const callAmount = Math.min(human.chips, toCall);
+
+        const minRaiseTotal = Math.min(human.chips + human.currentBet, this.currentBet + this.minRaise);
+        const maxRaiseTotal = human.chips + human.currentBet;
+        const canRaise = (maxRaiseTotal > this.currentBet);
+
+        return {
+          canCheck,
+          callAmount,
+          canRaise,
+          minRaiseTotal,
+          maxRaiseTotal,
+          currentBet: this.currentBet,
+          pot: this.pot
+        };
+      }
+
+      /**
+       * Advance Street (Preflop -> Flop -> Turn -> River -> Showdown)
+       */
+      advanceStreet() {
+        // Reset current round bets
+        this.players.forEach(p => { p.currentBet = 0; });
+        this.currentBet = 0;
+        this.minRaise = this.bigBlind;
+        this.playersActedThisRound.clear();
+
+        // Check if we need to fast-forward all-ins
+        const ableToAct = this.getPlayersAbleToAct();
+        const autoFastForward = (ableToAct.length <= 1 && this.getActivePlayersCount() > 1);
+
+        switch (this.stage) {
+          case 'PREFLOP':
+            this.stage = 'FLOP';
+            this.deck.pop(); // Burn card
+            this.communityCards.push(this.deck.pop(), this.deck.pop(), this.deck.pop());
+            this.log('--- Флоп ---', 'log-blind');
+            this.sound.playCardSlide();
+            break;
+
+          case 'FLOP':
+            this.stage = 'TURN';
+            this.deck.pop(); // Burn card
+            this.communityCards.push(this.deck.pop());
+            this.log('--- Тёрн ---', 'log-blind');
+            this.sound.playCardSlide();
+            break;
+
+          case 'TURN':
+            this.stage = 'RIVER';
+            this.deck.pop(); // Burn card
+            this.communityCards.push(this.deck.pop());
+            this.log('--- Ривер ---', 'log-blind');
+            this.sound.playCardSlide();
+            break;
+
+          case 'RIVER':
+            this.stage = 'SHOWDOWN';
+            this.log('--- Вскрытие карт (Showdown) ---', 'log-blind');
+            this.handleShowdown();
+            return;
+        }
+
+        // Set action starting first active player after dealer
+        let firstToAct = (this.dealerIdx + 1) % this.players.length;
+        let count = 0;
+        while ((this.players[firstToAct].folded || this.players[firstToAct].isAllIn) && count < this.players.length) {
+          firstToAct = (firstToAct + 1) % this.players.length;
+          count++;
+        }
+        this.activePlayerIdx = firstToAct;
+
+        this.notifyUI();
+
+        if (autoFastForward) {
+          setTimeout(() => this.advanceStreet(), this.getDelay(900));
+        } else {
+          this.processNextTurn();
+        }
+      }
+
+      /**
+       * When all other players fold, remaining player takes the pot
+       */
+      handleFoldWin() {
+        const winner = this.players.find(p => !p.folded);
+        if (!winner) return;
+
+        winner.chips += this.pot;
+        this.log(`🏆 ${winner.name} забирает банк $${this.pot} (Все сбросили)`, 'log-win');
+        this.sound.playWin();
+
+        if (this.ui && this.ui.showWinner) {
+          this.ui.showWinner({
+            player: winner,
+            amount: this.pot,
+            desc: 'Все соперники сбросили карты',
+            winningCards: []
+          });
+        }
+
+        this.stage = 'IDLE';
+        this.notifyUI();
+      }
+
+      /**
+       * Calculates main pot and side pots according to All-In tiers and returns uncalled bets
+       */
+      calculateSidePots() {
+        const contributions = this.players
+          .filter(p => p.totalBetInHand > 0)
+          .map(p => ({ id: p.id, amount: p.totalBetInHand, folded: p.folded }));
+
+        if (contributions.length === 0) return [];
+
+        // Uncalled bet refund
+        contributions.sort((a, b) => b.amount - a.amount);
+        if (contributions.length > 1 && contributions[0].amount > contributions[1].amount) {
+          const refundAmt = contributions[0].amount - contributions[1].amount;
+          const refundedPlayer = this.players.find(p => p.id === contributions[0].id);
+          if (refundedPlayer) {
+            refundedPlayer.chips += refundAmt;
+            refundedPlayer.totalBetInHand -= refundAmt;
+            this.pot -= refundAmt;
+            this.log(`Возврат неуравненной ставки $${refundAmt} игроку ${refundedPlayer.name}`, 'log-action');
+          }
+          contributions[0].amount = contributions[1].amount;
+        }
+
+        // Distinct tiers
+        const tiers = Array.from(new Set(contributions.map(c => c.amount))).sort((a, b) => a - b);
+        const pots = [];
+        let prevTier = 0;
+
+        for (let tier of tiers) {
+          const tierDiff = tier - prevTier;
+          let potChunk = 0;
+          const eligiblePlayerIds = [];
+
+          for (let c of contributions) {
+            if (c.amount >= tier) {
+              potChunk += tierDiff;
+              if (!c.folded) {
+                eligiblePlayerIds.push(c.id);
+              }
+            }
+          }
+
+          if (potChunk > 0 && eligiblePlayerIds.length > 0) {
+            pots.push({
+              amount: potChunk,
+              eligiblePlayerIds
+            });
+          }
+          prevTier = tier;
+        }
+
+        return pots;
+      }
+
+      /**
+       * Resolves Showdown combinations and splits pots
+       */
+      handleShowdown() {
+        const calculatedPots = this.calculateSidePots();
+        const nonFolded = this.players.filter(p => !p.folded);
+
+        // Evaluate all hands
+        const evaluations = {};
+        for (let p of nonFolded) {
+          evaluations[p.id] = PokerEvaluator.evaluateBestHand([...p.cards, ...this.communityCards]);
+          this.log(`${p.name} показывает: ${evaluations[p.id].name}`, 'log-action');
+        }
+
+        const potResults = [];
+        let totalDistributed = 0;
+        const winningCardKeys = new Set();
+
+        // Award each pot
+        calculatedPots.forEach((potObj, idx) => {
+          const contenders = nonFolded.filter(p => potObj.eligiblePlayerIds.includes(p.id));
+          if (contenders.length === 0) return;
+
+          let bestEval = null;
+          let potWinners = [];
+
+          for (let c of contenders) {
+            const ev = evaluations[c.id];
+            if (!bestEval) {
+              bestEval = ev;
+              potWinners = [c];
+            } else {
+              const cmp = PokerEvaluator.compareScores(ev.score, bestEval.score);
+              if (cmp > 0) {
+                bestEval = ev;
+                potWinners = [c];
+              } else if (cmp === 0) {
+                potWinners.push(c);
+              }
+            }
+          }
+
+          // Split pot evenly among winners
+          const winShare = Math.floor(potObj.amount / potWinners.length);
+          const remainder = potObj.amount % potWinners.length;
+
+          potWinners.forEach((w, wIdx) => {
+            const extra = (wIdx === 0 ? remainder : 0);
+            const payout = winShare + extra;
+            w.chips += payout;
+            totalDistributed += payout;
+            this.log(`🏆 ${w.name} выигрывает $${payout} с комбинацией: ${bestEval.name}`, 'log-win');
+
+            if (bestEval.best5) {
+              bestEval.best5.forEach(c => winningCardKeys.add(`${c.suit}_${c.value}`));
+            }
+          });
+
+          potResults.push({
+            potIndex: idx,
+            amount: potObj.amount,
+            winners: potWinners,
+            evaluation: bestEval
+          });
+        });
+
+        this.sound.playWin();
+
+        const mainWinner = potResults[0] ? potResults[0].winners[0] : nonFolded[0];
+        const mainDesc = potResults[0] ? potResults[0].evaluation.name : 'Победа';
+
+        if (this.ui && this.ui.showWinner) {
+          this.ui.showWinner({
+            player: mainWinner,
+            amount: totalDistributed,
+            desc: mainDesc,
+            winningCards: Array.from(winningCardKeys)
+          });
+        }
+
+        this.stage = 'IDLE';
+        this.notifyUI();
+      }
+
+      getPublicGameState() {
+        return {
+          stage: this.stage,
+          deckCount: this.deck.length,
+          communityCards: [...this.communityCards],
+          players: this.players.map(p => ({
+            id: p.id,
+            name: p.name,
+            chips: p.chips,
+            currentBet: p.currentBet,
+            totalBetInHand: p.totalBetInHand,
+            folded: p.folded,
+            isAllIn: p.isAllIn,
+            isDealer: p.isDealer
+          })),
+          pot: this.pot,
+          sidePots: this.sidePots,
+          currentBet: this.currentBet,
+          minRaise: this.minRaise,
+          activePlayerIdx: this.activePlayerIdx,
+          dealerIdx: this.dealerIdx,
+          smallBlind: this.smallBlind,
+          bigBlind: this.bigBlind,
+          gameSpeed: this.gameSpeed
+        };
+      }
+
+      notifyUI() {
+        if (this.ui && this.ui.render) {
+          this.ui.render(this);
+        }
+      }
+    }
+
+    /* ==========================================================================
+       5. UI CONTROLLER (DOM Rendering, Animations & Event Handlers)
+       ========================================================================== */
+    class UIController {
+      constructor() {
+        this.engine = new PokerEngine(this);
+
+        // Cache DOM Elements
+        this.potValueEl = document.getElementById('potValue');
+        this.sidePotsContainer = document.getElementById('sidePotsContainer');
+        this.stageBadgeEl = document.getElementById('stageBadge');
+        this.communityCardsEl = document.getElementById('communityCards');
+
+        this.actionPanel = document.getElementById('actionPanel');
+        this.betSlider = document.getElementById('betSlider');
+        this.betValueDisplay = document.getElementById('betValueDisplay');
+        this.btnFold = document.getElementById('btnFold');
+        this.btnCheckCall = document.getElementById('btnCheckCall');
+        this.btnCheckCallLabel = document.getElementById('btnCheckCallLabel');
+        this.btnCheckCallAmount = document.getElementById('btnCheckCallAmount');
+        this.btnBetRaise = document.getElementById('btnBetRaise');
+        this.btnBetRaiseLabel = document.getElementById('btnBetRaiseLabel');
+        this.btnBetRaiseAmount = document.getElementById('btnBetRaiseAmount');
+
+        this.presetMin = document.getElementById('presetMin');
+        this.preset2x = document.getElementById('preset2x');
+        this.presetHalfPot = document.getElementById('presetHalfPot');
+        this.presetPot = document.getElementById('presetPot');
+        this.presetAllIn = document.getElementById('presetAllIn');
+
+        this.winnerBanner = document.getElementById('winnerBanner');
+        this.winnerTitle = document.getElementById('winnerTitle');
+        this.winnerDesc = document.getElementById('winnerDesc');
+        this.winnerAmount = document.getElementById('winnerAmount');
+        this.btnNextHand = document.getElementById('btnNextHand');
+
+        this.humanHandEval = document.getElementById('humanHandEval');
+        this.logListEl = document.getElementById('logList');
+
+        this.speedToggleBtn = document.getElementById('speedToggleBtn');
+        this.speedLabel = document.getElementById('speedLabel');
+        this.soundToggleBtn = document.getElementById('soundToggleBtn');
+        this.soundIcon = document.getElementById('soundIcon');
+
+        this.bindEvents();
+        this.updateSoundIcon();
+
+        // Auto Start First Hand
+        setTimeout(() => {
+          this.engine.startNewHand();
+        }, 400);
+      }
+
+      bindEvents() {
+        // Header Controls
+        this.speedToggleBtn.addEventListener('click', () => {
+          this.engine.gameSpeed = (this.engine.gameSpeed === 1) ? 2 : 1;
+          this.speedLabel.textContent = `${this.engine.gameSpeed}x`;
+          this.speedToggleBtn.classList.toggle('active', this.engine.gameSpeed === 2);
+        });
+
+        this.soundToggleBtn.addEventListener('click', () => {
+          const isMuted = this.engine.sound.toggleMute();
+          this.updateSoundIcon();
+        });
+
+        // Modals
+        document.getElementById('cheatSheetBtn').addEventListener('click', () => {
+          document.getElementById('cheatSheetModal').classList.add('open');
+        });
+
+        document.getElementById('logModalBtn').addEventListener('click', () => {
+          document.getElementById('logModal').classList.add('open');
+        });
+
+        document.querySelectorAll('[data-close]').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const modalId = e.target.getAttribute('data-close');
+            document.getElementById(modalId).classList.remove('open');
+          });
+        });
+
+        document.querySelectorAll('.modal-overlay').forEach(overlay => {
+          overlay.addEventListener('click', (e) => {
+            if (e.target === overlay && overlay.id !== 'rebuyModal') {
+              overlay.classList.remove('open');
+            }
+          });
+        });
+
+        // Rebuy Button
+        document.getElementById('btnRebuy').addEventListener('click', () => {
+          this.engine.players[0].chips = 1000;
+          document.getElementById('rebuyModal').classList.remove('open');
+          this.engine.log('Вы пополнили баланс на $1,000!', 'log-win');
+          this.engine.startNewHand();
+        });
+
+        // Next Hand Button
+        this.btnNextHand.addEventListener('click', () => {
+          this.winnerBanner.classList.remove('show');
+          this.engine.startNewHand();
+        });
+
+        // Slider Interaction
+        this.betSlider.addEventListener('input', (e) => {
+          const val = Number(e.target.value);
+          this.betValueDisplay.textContent = `$${val}`;
+          this.btnBetRaiseAmount.textContent = `$${val}`;
+        });
+
+        // Bet Presets
+        this.presetMin.addEventListener('click', () => {
+          this.setSliderValue(Number(this.betSlider.min));
+        });
+
+        this.preset2x.addEventListener('click', () => {
+          const cur = Number(this.betSlider.value);
+          this.setSliderValue(cur * 2);
+        });
+
+        this.presetHalfPot.addEventListener('click', () => {
+          const halfPot = Math.floor(this.engine.pot * 0.5);
+          this.setSliderValue(halfPot + this.engine.currentBet);
+        });
+
+        this.presetPot.addEventListener('click', () => {
+          this.setSliderValue(this.engine.pot + this.engine.currentBet);
+        });
+
+        this.presetAllIn.addEventListener('click', () => {
+          this.setSliderValue(Number(this.betSlider.max));
+        });
+
+        // Main Action Buttons
+        this.btnFold.addEventListener('click', () => {
+          this.engine.handleAction(0, { type: 'FOLD' });
+        });
+
+        this.btnCheckCall.addEventListener('click', () => {
+          const toCall = this.engine.currentBet - this.engine.players[0].currentBet;
+          if (toCall === 0) {
+            this.engine.handleAction(0, { type: 'CHECK' });
+          } else {
+            this.engine.handleAction(0, { type: 'CALL' });
+          }
+        });
+
+        this.btnBetRaise.addEventListener('click', () => {
+          const raiseTotal = Number(this.betSlider.value);
+          this.engine.handleAction(0, { type: 'RAISE', amount: raiseTotal });
+        });
+      }
+
+      setSliderValue(val) {
+        const min = Number(this.betSlider.min);
+        const max = Number(this.betSlider.max);
+        const clamped = Math.max(min, Math.min(max, Math.round(val / 10) * 10));
+        this.betSlider.value = clamped;
+        this.betValueDisplay.textContent = `$${clamped}`;
+        this.btnBetRaiseAmount.textContent = `$${clamped}`;
+      }
+
+      updateSoundIcon() {
+        const isMuted = this.engine.sound.muted;
+        this.soundIcon.textContent = isMuted ? '🔇' : '🔊';
+        this.soundToggleBtn.classList.toggle('active', !isMuted);
+      }
+
+      showRebuyModal() {
+        document.getElementById('rebuyModal').classList.add('open');
+      }
+
+      enableControls(validActions) {
+        this.actionPanel.classList.remove('disabled');
+
+        if (validActions.canCheck) {
+          this.btnCheckCallLabel.textContent = 'Чек';
+          this.btnCheckCallAmount.textContent = 'Check';
+        } else {
+          this.btnCheckCallLabel.textContent = 'Колл';
+          this.btnCheckCallAmount.textContent = `$${validActions.callAmount}`;
+        }
+
+        if (validActions.canRaise) {
+          this.btnBetRaise.style.display = 'flex';
+          this.betSlider.min = validActions.minRaiseTotal;
+          this.betSlider.max = validActions.maxRaiseTotal;
+          this.setSliderValue(validActions.minRaiseTotal);
+
+          const isInitialBet = (validActions.currentBet === 0);
+          this.btnBetRaiseLabel.textContent = isInitialBet ? 'Ставка' : 'Рейз до';
+          this.presetMin.textContent = `Мин ($${validActions.minRaiseTotal})`;
+        } else {
+          this.btnBetRaise.style.display = 'none';
+        }
+      }
+
+      disableControls() {
+        this.actionPanel.classList.add('disabled');
+      }
+
+      showWinner(data) {
+        this.winnerTitle.textContent = `🏆 ${data.player.name}`;
+        this.winnerDesc.textContent = data.desc;
+        this.winnerAmount.textContent = `+$${data.amount}`;
+        this.winnerBanner.classList.add('show');
+
+        // Highlight winning cards on table
+        if (data.winningCards && data.winningCards.length > 0) {
+          document.querySelectorAll('.card').forEach(cardEl => {
+            const key = cardEl.getAttribute('data-card-key');
+            if (key && data.winningCards.includes(key)) {
+              cardEl.classList.add('highlight-winner');
+            }
+          });
+        }
+      }
+
+      onLogUpdate(entry, logs) {
+        if (!this.logListEl) return;
+        const div = document.createElement('div');
+        div.className = `log-entry ${entry.type}`;
+        div.textContent = `[${entry.time}] [${entry.stage}] ${entry.text}`;
+        this.logListEl.prepend(div);
+      }
+
+      getSuitSymbol(suit) {
+        switch (suit) {
+          case 'H': return '♥';
+          case 'D': return '♦';
+          case 'C': return '♣';
+          case 'S': return '♠';
+          default: return '';
+        }
+      }
+
+      getSuitClass(suit) {
+        return (suit === 'H' || suit === 'D') ? 'red' : 'black';
+      }
+
+      getValueDisplay(val) {
+        if (val === 14) return 'A';
+        if (val === 13) return 'K';
+        if (val === 12) return 'Q';
+        if (val === 11) return 'J';
+        if (val === 10) return '10';
+        return val.toString();
+      }
+
+      createCardElement(card, isHidden = false) {
+        const div = document.createElement('div');
+        div.className = 'card slide-in';
+
+        if (isHidden) {
+          div.classList.add('card-back-style');
+          return div;
+        }
+
+        const isRed = (card.suit === 'H' || card.suit === 'D');
+        div.classList.add(isRed ? 'red' : 'black');
+        div.setAttribute('data-card-key', `${card.suit}_${card.value}`);
+
+        const valStr = this.getValueDisplay(card.value);
+        const suitSymbol = this.getSuitSymbol(card.suit);
+
+        div.innerHTML = `
+          <div class="card-corner top-left">
+            <span class="card-val">${valStr}</span>
+            <span class="card-suit-mini">${suitSymbol}</span>
+          </div>
+          <div class="card-suit-center">${suitSymbol}</div>
+          <div class="card-corner bottom-right" style="transform: rotate(180deg)">
+            <span class="card-val">${valStr}</span>
+            <span class="card-suit-mini">${suitSymbol}</span>
+          </div>
+        `;
+        return div;
+      }
+
+      render(state) {
+        // 1. Render Pot & Stage
+        this.potValueEl.textContent = `$${state.pot}`;
+        const stageNames = {
+          'PREFLOP': 'Пре-флоп',
+          'FLOP': 'Флоп',
+          'TURN': 'Тёрн',
+          'RIVER': 'Ривер',
+          'SHOWDOWN': 'Вскрытие',
+          'IDLE': 'Раздача завершена'
+        };
+        this.stageBadgeEl.textContent = stageNames[state.stage] || state.stage;
+
+        // 2. Render Community Cards
+        this.communityCardsEl.innerHTML = '';
+        for (let i = 0; i < 5; i++) {
+          if (i < state.communityCards.length) {
+            const cEl = this.createCardElement(state.communityCards[i], false);
+            this.communityCardsEl.appendChild(cEl);
+          } else {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'card-placeholder';
+            this.communityCardsEl.appendChild(placeholder);
+          }
+        }
+
+        // 3. Render Players
+        const sbIdx = (state.dealerIdx + 1) % state.players.length;
+        const bbIdx = (state.dealerIdx + 2) % state.players.length;
+
+        state.players.forEach((p, idx) => {
+          const seatEl = document.getElementById(`seat-${idx}`);
+          const chipsEl = document.getElementById(`chips-${idx}`);
+          const statusEl = document.getElementById(`status-${idx}`);
+          const betEl = document.getElementById(`bet-${idx}`);
+          const cardsEl = document.getElementById(`cards-${idx}`);
+
+          // Active / Folded classes
+          seatEl.classList.toggle('active', idx === state.activePlayerIdx && state.stage !== 'SHOWDOWN' && state.stage !== 'IDLE');
+          seatEl.classList.toggle('folded', p.folded);
+
+          chipsEl.textContent = `$${p.chips}`;
+
+          // Status Badge
+          if (p.folded) {
+            statusEl.textContent = 'Сбросил (Fold)';
+            statusEl.className = 'player-status-badge folded-text';
+          } else if (p.isAllIn) {
+            statusEl.textContent = 'ВА-БАНК (All-In)';
+            statusEl.className = 'player-status-badge all-in';
+          } else if (idx === state.activePlayerIdx && state.stage !== 'SHOWDOWN' && state.stage !== 'IDLE') {
+            statusEl.textContent = 'Ходит...';
+            statusEl.className = 'player-status-badge action';
+          } else {
+            statusEl.textContent = (idx === 0) ? 'В игре' : p.archetype.toUpperCase();
+            statusEl.className = 'player-status-badge';
+          }
+
+          // Dealer / Blind badges
+          const oldBadges = seatEl.querySelectorAll('.dealer-badge, .blind-badge');
+          oldBadges.forEach(b => b.remove());
+
+          if (p.isDealer) {
+            const dBadge = document.createElement('div');
+            dBadge.className = 'dealer-badge';
+            dBadge.textContent = 'D';
+            seatEl.appendChild(dBadge);
+          } else if (idx === sbIdx) {
+            const sbBadge = document.createElement('div');
+            sbBadge.className = 'blind-badge sb';
+            sbBadge.textContent = 'SB';
+            seatEl.appendChild(sbBadge);
+          } else if (idx === bbIdx) {
+            const bbBadge = document.createElement('div');
+            bbBadge.className = 'blind-badge bb';
+            bbBadge.textContent = 'BB';
+            seatEl.appendChild(bbBadge);
+          }
+
+          // Bet chip display
+          if (p.currentBet > 0) {
+            betEl.style.display = 'flex';
+            betEl.textContent = `🪙 $${p.currentBet}`;
+          } else {
+            betEl.style.display = 'none';
+          }
+
+          // Hole Cards Rendering
+          cardsEl.innerHTML = '';
+          if (p.cards && p.cards.length === 2) {
+            const showCards = (idx === 0 || state.stage === 'SHOWDOWN' || (state.stage === 'IDLE' && !p.folded));
+            p.cards.forEach(card => {
+              const cardElement = this.createCardElement(card, !showCards);
+              cardsEl.appendChild(cardElement);
+            });
+          }
+        });
+
+        // 4. Update Human Player Real-Time Hand Strength Hint
+        const human = state.players[0];
+        if (!human.folded && human.cards && human.cards.length === 2) {
+          const evalCards = [...human.cards, ...state.communityCards];
+          const best = PokerEvaluator.evaluateBestHand(evalCards);
+          this.humanHandEval.style.display = 'block';
+          this.humanHandEval.textContent = `Комбинация: ${best.name}`;
+        } else {
+          this.humanHandEval.style.display = 'none';
+        }
+      }
+    }
+
+    // Initialize UI and Game upon DOM Ready
+    window.addEventListener('DOMContentLoaded', () => {
+      window.game = new UIController();
+    });
+  </script>
+</body>
+</html>
